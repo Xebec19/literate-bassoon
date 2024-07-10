@@ -15,6 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "../table";
+import { defaultColumnSizing } from "../../../constants/columns";
+import { GripVertical } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -25,28 +27,83 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const columnResizeMode = "onChange";
+  const columnResizeDirection = "ltr";
+
   const table = useReactTable({
     data,
     columns,
+    columnResizeMode,
+    columnResizeDirection,
     getCoreRowModel: getCoreRowModel(),
+    defaultColumn: {
+      size: defaultColumnSizing.size, //starting column size
+      minSize: defaultColumnSizing.minSize, //enforced during column resizing
+      maxSize: defaultColumnSizing.maxSize, //enforced during column resizing
+    },
   });
 
   return (
     <div className="rounded-md border">
-      <Table>
+      <Table
+        {...{
+          style: {
+            width: table.getCenterTotalSize(),
+          },
+        }}
+      >
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
+                  <>
+                    <TableHead
+                      className=""
+                      {...{
+                        key: header.id,
+                        colSpan: header.colSpan,
+                        style: {
+                          width: header.getSize(),
+                        },
+                      }}
+                    >
+                      <div className="flex justify-between items-center">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                        <GripVertical
+                          {...{
+                            onDoubleClick: () => header.column.resetSize(),
+                            onMouseDown: header.getResizeHandler(),
+                            onTouchStart: header.getResizeHandler(),
+                            className: `resizer size-4 muted cursor-col-resize ${
+                              table.options.columnResizeDirection
+                            } ${
+                              header.column.getIsResizing() ? "isResizing" : ""
+                            }`,
+                            // style: {
+                            //   transform:
+                            //     columnResizeMode === "onEnd" &&
+                            //     header.column.getIsResizing()
+                            //       ? `translateX(${
+                            //           (table.options.columnResizeDirection ===
+                            //           "rtl"
+                            //             ? -1
+                            //             : 1) *
+                            //           (table.getState().columnSizingInfo
+                            //             .deltaOffset ?? 0)
+                            //         }px)`
+                            //       : "",
+                            // },
+                          }}
+                        />
+                      </div>
+                    </TableHead>
+                  </>
                 );
               })}
             </TableRow>
@@ -60,7 +117,14 @@ export function DataTable<TData, TValue>({
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    {...{
+                      key: cell.id,
+                      style: {
+                        width: cell.column.getSize(),
+                      },
+                    }}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

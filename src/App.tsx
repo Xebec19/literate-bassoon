@@ -1,19 +1,20 @@
+import { z } from "zod";
 import "./App.css";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
 import { DataTable } from "./components/ui/data-table/data-table";
-import { columns, Payment } from "./components/users/columns";
+import { columns, ZodUser } from "./components/users/columns";
 
-function getData(): Payment[] {
+function getData(): z.infer<typeof ZodUser>[] {
   // Fetch data from your API here.
   return [
     {
-      id: "728ed52f",
-      amount: 100,
-      status: "pending",
-      email: "m@example.com",
+      id: 1 + "",
+      name: "Rohan",
+      email: "rohan@gmail.com",
+      age: 13,
+      registrationDate: new Date(),
     },
-    // ...
   ];
 }
 
