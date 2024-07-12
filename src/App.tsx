@@ -2,8 +2,8 @@ import { z } from "zod";
 import "./App.css";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
-import { DataTable } from "./components/ui/data-table/data-table";
-import { columns, ZodUser } from "./components/users/columns";
+import { ZodUser } from "./components/users/columns";
+import DndTable from "./components/ui/data-table/dnd-table";
 
 function getData(): z.infer<typeof ZodUser>[] {
   // Fetch data from your API here.
@@ -28,7 +28,8 @@ function App() {
           <div>
             <ModeToggle />
           </div>
-          <DataTable columns={columns} data={data} />
+          {/* <DataTable columns={columns} data={data} /> */}
+          <DndTable />
         </div>
       </ThemeProvider>
     </>
