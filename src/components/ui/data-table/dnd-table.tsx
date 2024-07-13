@@ -1,11 +1,13 @@
-import React, { CSSProperties } from "react";
+import React, { CSSProperties, useTransition } from "react";
 
 import {
   Cell,
   ColumnDef,
   Header,
+  SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { makeData, Person } from "../../../lib/makeData";
@@ -39,6 +41,8 @@ import {
   TableHeader,
   TableRow,
 } from "../table";
+import { ArrowDown, ArrowDownUp, ArrowUp, GripVertical } from "lucide-react";
+import { Button } from "../button";
 
 const DraggableTableHeader = ({
   header,
@@ -61,17 +65,57 @@ const DraggableTableHeader = ({
   };
 
   return (
-    <TableHead
-      colSpan={header.colSpan}
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-    >
-      {header.isPlaceholder
-        ? null
-        : flexRender(header.column.columnDef.header, header.getContext())}
-    </TableHead>
+    <>
+      <TableHead colSpan={header.colSpan} ref={setNodeRef} style={style}>
+        <div className="flex justify-between item-center">
+          <div className="space-x-2 items-center flex">
+            <span
+              className={
+                header.column.getCanSort() ? "cursor-pointer select-none" : ""
+              }
+              title={
+                header.column.getCanSort()
+                  ? header.column.getNextSortingOrder() === "asc"
+                    ? "Sort ascending"
+                    : header.column.getNextSortingOrder() === "desc"
+                    ? "Sort descending"
+                    : "Clear sort"
+                  : undefined
+              }
+              {...attributes}
+              {...listeners}
+            >
+              {header.isPlaceholder
+                ? null
+                : flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+            </span>
+            <button onClick={header.column.getToggleSortingHandler()}>
+              {{
+                asc: <ArrowUp className="size-4" />,
+                desc: <ArrowDown className="size-4" />,
+              }[header.column.getIsSorted() as string] ?? (
+                <ArrowDownUp className="size-4" />
+              )}
+            </button>
+          </div>
+
+          <GripVertical
+            {...{
+              onDoubleClick: () => header.column.resetSize(),
+              onMouseDown: header.getResizeHandler(),
+              onTouchStart: header.getResizeHandler(),
+              className: `resizer ltr cursor-ew-resize ${
+                header.column.getIsResizing() ? "isResizing" : ""
+              }`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      </TableHead>
+    </>
   );
 };
 
@@ -97,10 +141,15 @@ const DragAlongCell = ({ cell }: { cell: Cell<Person, unknown> }) => {
 };
 
 export default function DndTable() {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  const [isPending, startTransition] = useTransition();
+
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
       {
         accessorKey: "firstName",
+        header: () => <span>First Name</span>,
         cell: (info) => info.getValue(),
         id: "firstName",
         size: 150,
@@ -149,8 +198,17 @@ export default function DndTable() {
   const table = useReactTable({
     data,
     columns,
+    columnResizeDirection: "ltr",
+    columnResizeMode: "onChange",
+    defaultColumn: {
+      minSize: 50,
+      maxSize: 600,
+    },
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
     state: {
+      sorting,
       columnOrder,
     },
     onColumnOrderChange: setColumnOrder,
@@ -177,47 +235,68 @@ export default function DndTable() {
     useSensor(KeyboardSensor, {})
   );
 
+  function resetFilters() {
+    startTransition(() => {
+      const colOrder = columns.map((c) => c.id!);
+      setColumnOrder(colOrder);
+      setSorting([]);
+    });
+  }
+
   return (
-    // NOTE: This provider creates div elements, so don't nest inside of <table> elements
-    <div className="rounded-md border">
-      <DndContext
-        collisionDetection={closestCenter}
-        modifiers={[restrictToHorizontalAxis]}
-        onDragEnd={handleDragEnd}
-        sensors={sensors}
+    <>
+      <div
+        className="w-full flex justify-end"
+        {...{ style: { width: table.getCenterTotalSize() } }}
       >
-        <Table {...{ style: { width: table.getCenterTotalSize() } }}>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                <SortableContext
-                  items={columnOrder}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  {headerGroup.headers.map((header) => (
-                    <DraggableTableHeader key={header.id} header={header} />
-                  ))}
-                </SortableContext>
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
+        <Button
+          variant={"outline"}
+          disabled={isPending}
+          onClick={() => resetFilters()}
+        >
+          Reset
+        </Button>
+      </div>
+      <div className="rounded-md border">
+        <DndContext
+          collisionDetection={closestCenter}
+          modifiers={[restrictToHorizontalAxis]}
+          onDragEnd={handleDragEnd}
+          sensors={sensors}
+        >
+          <Table {...{ style: { width: table.getCenterTotalSize() } }}>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
                   <SortableContext
-                    key={cell.id}
                     items={columnOrder}
                     strategy={horizontalListSortingStrategy}
                   >
-                    <DragAlongCell key={cell.id} cell={cell} />
+                    {headerGroup.headers.map((header) => (
+                      <DraggableTableHeader key={header.id} header={header} />
+                    ))}
                   </SortableContext>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </DndContext>
-    </div>
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <SortableContext
+                      key={cell.id}
+                      items={columnOrder}
+                      strategy={horizontalListSortingStrategy}
+                    >
+                      <DragAlongCell key={cell.id} cell={cell} />
+                    </SortableContext>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DndContext>
+      </div>
+    </>
   );
 }
