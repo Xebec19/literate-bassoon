@@ -5,8 +5,10 @@ import {
   ColumnDef,
   Header,
   SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -29,7 +31,12 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
-
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "../dropdown-menu";
 // needed for row & cell level scope DnD setup
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -41,8 +48,15 @@ import {
   TableHeader,
   TableRow,
 } from "../table";
-import { ArrowDown, ArrowDownUp, ArrowUp, GripVertical } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowDownUp,
+  ArrowUp,
+  ChevronDownIcon,
+  GripVertical,
+} from "lucide-react";
 import { Button } from "../button";
+import { Input } from "../input";
 
 const DraggableTableHeader = ({
   header,
@@ -142,6 +156,8 @@ const DragAlongCell = ({ cell }: { cell: Cell<Person, unknown> }) => {
 
 export default function DndTable() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
 
   const [isPending, startTransition] = useTransition();
 
@@ -207,9 +223,12 @@ export default function DndTable() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getPaginationRowModel: getPaginationRowModel(),
     state: {
       sorting,
       columnOrder,
+      columnVisibility,
     },
     onColumnOrderChange: setColumnOrder,
     debugTable: true,
@@ -240,15 +259,50 @@ export default function DndTable() {
       const colOrder = columns.map((c) => c.id!);
       setColumnOrder(colOrder);
       setSorting([]);
+      setColumnVisibility({});
     });
   }
 
   return (
-    <>
-      <div
-        className="w-full flex justify-end"
-        {...{ style: { width: table.getCenterTotalSize() } }}
-      >
+    <div className="w-full">
+      <div className="flex items-center py-4">
+        <Input
+          placeholder="Search"
+          value={
+            (table.getColumn("firstName")?.getFilterValue() as string) ?? ""
+          }
+          onChange={(event) =>
+            table.getColumn("firstName")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto">
+              Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        &nbsp;&nbsp;
         <Button
           variant={"outline"}
           disabled={isPending}
@@ -264,7 +318,7 @@ export default function DndTable() {
           onDragEnd={handleDragEnd}
           sensors={sensors}
         >
-          <Table {...{ style: { width: table.getCenterTotalSize() } }}>
+          <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
@@ -280,23 +334,58 @@ export default function DndTable() {
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <SortableContext
-                      key={cell.id}
-                      items={columnOrder}
-                      strategy={horizontalListSortingStrategy}
-                    >
-                      <DragAlongCell key={cell.id} cell={cell} />
-                    </SortableContext>
-                  ))}
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <SortableContext
+                        key={cell.id}
+                        items={columnOrder}
+                        strategy={horizontalListSortingStrategy}
+                      >
+                        <DragAlongCell key={cell.id} cell={cell} />
+                      </SortableContext>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </DndContext>
       </div>
-    </>
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s).
+        </div>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
