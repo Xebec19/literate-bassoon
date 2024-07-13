@@ -1,7 +1,7 @@
 import "./App.css";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
-import DndTable from "./components/ui/data-table/dnd-table";
+import DataTable from "./components/ui/data-table/data-table";
 
 function App() {
   return (
@@ -12,7 +12,7 @@ function App() {
             <ModeToggle />
           </div>
           {/* <DataTable columns={columns} data={data} /> */}
-          <DndTable />
+          <DataTable />
         </div>
       </ThemeProvider>
     </>
