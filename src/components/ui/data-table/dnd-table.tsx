@@ -1,4 +1,4 @@
-import React, { CSSProperties, useTransition } from "react";
+import React, { CSSProperties, useMemo, useTransition } from "react";
 
 import {
   Cell,
@@ -210,7 +210,8 @@ export default function DndTable() {
   );
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [data, setData] = React.useState(() => makeData(20));
+  const data = useMemo(() => makeData(20), []);
+  console.log({ data });
   const [columnOrder, setColumnOrder] = React.useState<string[]>(() =>
     columns.map((c) => c.id!)
   );
