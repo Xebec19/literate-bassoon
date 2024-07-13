@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { makeData, Person } from "../../../lib/makeData";
+import { makeData, ZodPerson } from "../../../lib/makeData";
 
 // needed for table body level scope DnD setup
 import {
@@ -58,11 +58,13 @@ import {
 } from "lucide-react";
 import { Button } from "../button";
 import { Input } from "../input";
+import { z } from "zod";
+import { format } from "date-fns";
 
 const DraggableTableHeader = ({
   header,
 }: {
-  header: Header<Person, unknown>;
+  header: Header<z.infer<typeof ZodPerson>, unknown>;
 }) => {
   const { attributes, isDragging, listeners, setNodeRef, transform } =
     useSortable({
@@ -134,7 +136,11 @@ const DraggableTableHeader = ({
   );
 };
 
-const DragAlongCell = ({ cell }: { cell: Cell<Person, unknown> }) => {
+const DragAlongCell = ({
+  cell,
+}: {
+  cell: Cell<z.infer<typeof ZodPerson>, unknown>;
+}) => {
   const { isDragging, setNodeRef, transform } = useSortable({
     id: cell.column.id,
   });
@@ -162,45 +168,42 @@ export default function DndTable() {
 
   const [isPending, startTransition] = useTransition();
 
-  const columns = React.useMemo<ColumnDef<Person>[]>(
+  const columns = React.useMemo<ColumnDef<z.infer<typeof ZodPerson>>[]>(
     () => [
       {
-        accessorKey: "firstName",
-        header: () => <span>First Name</span>,
-        cell: (info) => info.getValue(),
-        id: "firstName",
+        accessorKey: "id",
+        header: () => <span>ID</span>,
+        id: "id",
+        size: 120,
+      },
+      {
+        accessorKey: "name",
+        header: () => <span>Name</span>,
+        id: "name",
         size: 150,
       },
       {
-        accessorFn: (row) => row.lastName,
-        cell: (info) => info.getValue(),
-        header: () => <span>Last Name</span>,
-        id: "lastName",
+        accessorKey: "email",
+        header: () => <span>Email</span>,
+        id: "email",
         size: 150,
       },
       {
         accessorKey: "age",
-        header: () => "Age",
+        header: () => <span>Age</span>,
         id: "age",
         size: 120,
       },
       {
-        accessorKey: "visits",
-        header: () => <span>Visits</span>,
-        id: "visits",
+        accessorKey: "registrationDate",
+        header: () => <span>Registration Date</span>,
+        cell: ({ row }) => (
+          <span>
+            {format(new Date(row.getValue("registrationDate")), "MM/dd/yyyy")}
+          </span>
+        ),
+        id: "registrationDate",
         size: 120,
-      },
-      {
-        accessorKey: "status",
-        header: "Status",
-        id: "status",
-        size: 150,
-      },
-      {
-        accessorKey: "progress",
-        header: "Profile Progress",
-        id: "progress",
-        size: 180,
       },
     ],
     []
@@ -262,56 +265,66 @@ export default function DndTable() {
       setColumnOrder(colOrder);
       setSorting([]);
       setColumnVisibility({});
+      table.getColumn("name")?.setFilterValue("");
+      table.getColumn("email")?.setFilterValue("");
     });
   }
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="py-4 flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
         <Input
-          placeholder="Search"
-          value={
-            (table.getColumn("firstName")?.getFilterValue() as string) ?? ""
-          }
+          placeholder="Search Name"
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("firstName")?.setFilterValue(event.target.value)
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        &nbsp;&nbsp;
-        <Button
-          variant={"outline"}
-          disabled={isPending}
-          onClick={() => resetFilters()}
-        >
-          Reset
-        </Button>
+        <Input
+          placeholder="Search Email"
+          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("email")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <div className="space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-auto">
+                Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant={"outline"}
+            disabled={isPending}
+            onClick={() => resetFilters()}
+          >
+            Reset
+          </Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <DndContext
@@ -365,28 +378,22 @@ export default function DndTable() {
         </DndContext>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s).
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );

@@ -1,14 +1,13 @@
 import { faker } from "@faker-js/faker";
+import { z } from "zod";
 
-export type Person = {
-  firstName: string;
-  lastName: string;
-  age: number;
-  visits: number;
-  progress: number;
-  status: "relationship" | "complicated" | "single";
-  subRows?: Person[];
-};
+export const ZodPerson = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  age: z.number(),
+  registrationDate: z.date(),
+});
 
 const range = (len: number) => {
   const arr: number[] = [];
@@ -18,28 +17,22 @@ const range = (len: number) => {
   return arr;
 };
 
-const newPerson = (): Person => {
+const newPerson = (): z.infer<typeof ZodPerson> => {
   return {
-    firstName: faker.person.firstName(),
-    lastName: faker.person.lastName(),
-    age: faker.number.int(40),
-    visits: faker.number.int(1000),
-    progress: faker.number.int(100),
-    status: faker.helpers.shuffle<Person["status"]>([
-      "relationship",
-      "complicated",
-      "single",
-    ])[0]!,
+    id: faker.database.mongodbObjectId(),
+    name: faker.person.fullName(),
+    email: faker.internet.email(),
+    age: faker.number.int({ min: 16, max: 40 }),
+    registrationDate: faker.date.past({ years: 2 }),
   };
 };
 
 export function makeData(...lens: number[]) {
-  const makeDataLevel = (depth = 0): Person[] => {
+  const makeDataLevel = (depth = 0): z.infer<typeof ZodPerson>[] => {
     const len = lens[depth]!;
-    return range(len).map((d): Person => {
+    return range(len).map((): z.infer<typeof ZodPerson> => {
       return {
         ...newPerson(),
-        subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
       };
     });
   };
