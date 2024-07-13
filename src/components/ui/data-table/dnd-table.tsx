@@ -77,7 +77,7 @@ const DraggableTableHeader = ({
     transform: CSS.Translate.toString(transform), // translate instead of transform to avoid squishing
     transition: "width transform 0.2s ease-in-out",
     whiteSpace: "nowrap",
-    width: header.column.getSize(),
+    minWidth: header.column.getSize(),
     zIndex: isDragging ? 1 : 0,
   };
 
@@ -86,10 +86,17 @@ const DraggableTableHeader = ({
       <TableHead colSpan={header.colSpan} ref={setNodeRef} style={style}>
         <div className="flex justify-between item-center">
           <div className="space-x-2 items-center flex">
-            <span
-              className={
-                header.column.getCanSort() ? "cursor-pointer select-none" : ""
-              }
+            <span className={"cursor-grab"} {...attributes} {...listeners}>
+              {header.isPlaceholder
+                ? null
+                : flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+            </span>
+            <Button
+              onClick={header.column.getToggleSortingHandler()}
+              variant={"ghost"}
               title={
                 header.column.getCanSort()
                   ? header.column.getNextSortingOrder() === "asc"
@@ -99,37 +106,32 @@ const DraggableTableHeader = ({
                     : "Clear sort"
                   : undefined
               }
-              {...attributes}
-              {...listeners}
             >
-              {header.isPlaceholder
-                ? null
-                : flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-            </span>
-            <button onClick={header.column.getToggleSortingHandler()}>
               {{
                 asc: <ArrowUp className="size-4" />,
                 desc: <ArrowDown className="size-4" />,
               }[header.column.getIsSorted() as string] ?? (
                 <ArrowDownUp className="size-4" />
               )}
-            </button>
+            </Button>
           </div>
 
-          <GripVertical
-            {...{
-              onDoubleClick: () => header.column.resetSize(),
-              onMouseDown: header.getResizeHandler(),
-              onTouchStart: header.getResizeHandler(),
-              className: `resizer ltr cursor-ew-resize ${
-                header.column.getIsResizing() ? "isResizing" : ""
-              }`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+          {header.column.getCanResize() ? (
+            <Button variant={"ghost"} onClick={(e) => e.stopPropagation()}>
+              <GripVertical
+                {...{
+                  onDoubleClick: () => header.column.resetSize(),
+                  onMouseDown: header.getResizeHandler(),
+                  onTouchStart: header.getResizeHandler(),
+                  className: `resizer ltr cursor-ew-resize ${
+                    header.column.getIsResizing() ? "isResizing" : ""
+                  }`,
+                }}
+              />
+            </Button>
+          ) : (
+            <></>
+          )}
         </div>
       </TableHead>
     </>
@@ -204,6 +206,7 @@ export default function DndTable() {
         ),
         id: "registrationDate",
         size: 120,
+        enableResizing: false,
       },
     ],
     []
