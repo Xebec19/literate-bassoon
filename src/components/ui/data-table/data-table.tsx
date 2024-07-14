@@ -115,7 +115,11 @@ const DraggableTableHeader = ({
               )}
             </Button>
           </div>
-
+          <div
+            className="flex-1 cursor-grab"
+            {...attributes}
+            {...listeners}
+          ></div>
           {header.column.getCanResize() ? (
             <Button variant={"ghost"} onClick={(e) => e.stopPropagation()}>
               <GripVertical
@@ -206,7 +210,6 @@ export default function DataTable() {
         ),
         id: "registrationDate",
         size: 120,
-        enableResizing: false,
       },
     ],
     []
@@ -214,7 +217,6 @@ export default function DataTable() {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const data = useMemo(() => makeData(20), []);
-  console.log({ data });
   const [columnOrder, setColumnOrder] = React.useState<string[]>(() =>
     columns.map((c) => c.id!)
   );
@@ -322,7 +324,7 @@ export default function DataTable() {
           </DropdownMenu>
 
           <Button
-            variant={"outline"}
+            variant={"secondary"}
             disabled={isPending}
             onClick={() => resetFilters()}
           >
@@ -383,7 +385,7 @@ export default function DataTable() {
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <Button
-          variant="outline"
+          variant={"secondary"}
           size="sm"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
@@ -391,7 +393,7 @@ export default function DataTable() {
           Previous
         </Button>
         <Button
-          variant="outline"
+          variant={"secondary"}
           size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
